@@ -37,3 +37,67 @@ func GetArticleList(pageNum, pageSize int) (articleList []*model.ArticleInfo, er
 	err = DB.Select(&articleList, sqlstr, pageNum, pageSize)
 	return
 }
+
+func GetArticleDetail(articleId int64) (articleDetail *model.ArticleDetail, err error) {
+	if articleId <= 0 {
+		err = fmt.Errorf("invalid parameter,article_id:%d", articleId)
+		return
+	}
+
+	articleDetail = &model.ArticleDetail{}
+	sqlstr := `select 
+					 id, summary, title, view_count, content,
+	                 create_time, comment_count, username, category_id
+				from 
+					article 
+				where 
+					id = ?
+				and
+					status = 1
+				`
+	err = DB.Get(articleDetail, sqlstr, articleId)
+
+	return
+}
+
+func GetRelativeArticle(articleId int64) (articleList []*model.RelativeArticle, err error) {
+
+	var categoryId int64
+	sqlstr := "select category_id from article where id=?"
+	err = DB.Get(&categoryId, sqlstr, articleId)
+	if err != nil {
+		return
+	}
+
+	sqlstr = "select id, title from article where category_id=? and id !=?  limit 10"
+	err = DB.Select(&articleList, sqlstr, categoryId, articleId)
+	return
+}
+
+func GetPrevArticleById(articleId int64) (info *model.RelativeArticle, err error) {
+
+	info = &model.RelativeArticle{
+		ArticleId: -1, //给一个特殊值，判断==-1时，显示特殊文案
+	}
+	sqlstr := "select id, title from article where id < ? order by id desc limit 1"
+	err = DB.Get(info, sqlstr, articleId)
+	if err != nil {
+		return
+	}
+
+	return
+}
+
+func GetNextArticleById(articleId int64) (info *model.RelativeArticle, err error) {
+
+	info = &model.RelativeArticle{
+		ArticleId: -1,
+	}
+	sqlstr := "select id, title from article where id > ? order by id asc limit 1"
+	err = DB.Get(info, sqlstr, articleId)
+	if err != nil {
+		return
+	}
+
+	return
+}
